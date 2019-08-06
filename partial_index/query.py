@@ -1,6 +1,7 @@
 """Django Q object to SQL string conversion."""
 from django.db.models import expressions, Q, F
 from django.db.models.sql import Query
+import django
 
 
 class Vendor(object):
@@ -15,6 +16,22 @@ class PQ(Q):
 
     PartialIndex definitions in model classes should use PQ to avoid problems when upgrading projects.
     """
+
+    def __init__(self, *args, **kwargs):
+        if django.VERSION < (2, 0):
+            super(Q, self).__init__(
+                children=list(args) + sorted(list(kwargs.items()))
+            )
+        elif django.VERSION < (2, 1):
+            connector = kwargs.pop('_connector', None)
+            negated = kwargs.pop('_negated', False)
+            super(Q, self).__init__(
+                children=list(args) + sorted(kwargs.items()),
+                connector=connector, negated=negated
+            )
+        else:
+            super(PQ, self).__init__(*args, **kwargs)
+
 
     def __eq__(self, other):
         """Copied from Django 2.0 django.utils.tree.Node.__eq__()"""
